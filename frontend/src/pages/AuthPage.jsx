@@ -19,8 +19,8 @@ export default function AuthPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [country, setCountry] = useState('United States');
-  const [idDocType, setIdDocType] = useState('national_id');
+  const [country, setCountry] = useState('India');
+  const [idDocType, setIdDocType] = useState('aadhaar');
   const [idDocNumber, setIdDocNumber] = useState('');
 
   // Password Reset State
@@ -332,7 +332,7 @@ export default function AuthPage() {
                   <input
                     type="tel"
                     required
-                    placeholder="+1 555 019 2834"
+                    placeholder="+91 7504422639"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200"
@@ -343,7 +343,7 @@ export default function AuthPage() {
                   <input
                     type="text"
                     required
-                    placeholder="United States"
+                    placeholder="India"
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200"
@@ -367,6 +367,7 @@ export default function AuthPage() {
                     onChange={(e) => setIdDocType(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200"
                   >
+                    <option value="aadhaar">Aadhaar Card (National ID)</option>
                     <option value="national_id">National ID Card</option>
                     <option value="passport">Passport</option>
                     <option value="drivers_license">Driver's License</option>
@@ -378,7 +379,7 @@ export default function AuthPage() {
                   <input
                     type="text"
                     required
-                    placeholder="A987654321"
+                    placeholder="1234 5678 9012 (Aadhaar)"
                     value={idDocNumber}
                     onChange={(e) => setIdDocNumber(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono"
@@ -386,7 +387,7 @@ export default function AuthPage() {
                 </div>
               </div>
               <p className="text-[10px] text-slate-400 italic">
-                * ID Document Type is the type of government-issued ID card used to verify your account identity (e.g. Passport, National ID Card, or Driver's License).
+                * ID Document Type is the type of government-issued ID card used to verify your account identity (e.g. Aadhaar Card, Passport, or Driver's License).
               </p>
             </div>
 

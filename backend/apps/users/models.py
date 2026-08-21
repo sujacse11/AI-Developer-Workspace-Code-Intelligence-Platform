@@ -9,8 +9,9 @@ class User(AbstractUser):
     )
     
     DOC_TYPES = (
-        ('passport', 'Passport'),
+        ('aadhaar', 'Aadhaar Card (National ID)'),
         ('national_id', 'National ID Card'),
+        ('passport', 'Passport'),
         ('drivers_license', 'Drivers License'),
     )
     

@@ -1,5 +1,6 @@
 import os
 import sys
+import uuid
 import django
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -7,6 +8,9 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from datetime import timedelta
+
 from apps.projects.models import Project, ProjectFile, FileVersion
 from apps.ai.models import AIJob, AIActionResult
 from apps.collaboration.models import ProjectMember, LineComment
@@ -16,52 +20,91 @@ from apps.users.models import ActivityLog
 User = get_user_model()
 
 def seed():
-    print("Seeding database...")
+    print("Seeding database with comprehensive end-to-end dataset...")
     try:
-        # 1. Create Admin User
-        admin, created = User.objects.get_or_create(
+        # ==========================================
+        # 1. USER MODULE SEEDING (Admin, Dev, Reviewer)
+        # ==========================================
+        admin, _ = User.objects.get_or_create(
             username='admin',
             defaults={
                 'email': 'admin@platform.ai',
+                'first_name': 'Sarah',
+                'last_name': 'Connor',
                 'is_staff': True,
                 'is_superuser': True,
                 'plan': 'enterprise',
-                'bio': 'Principal AI Platform Administrator',
-                'preferred_languages': ['python', 'typescript', 'sql']
+                'bio': 'Principal AI Platform Administrator & Lead Architect',
+                'preferred_languages': ['python', 'typescript', 'sql', 'rust'],
+                'phone_number': '+1 415 555 0199',
+                'country': 'United States',
+                'kyc_verified': True,
+                'id_document_type': 'passport',
+                'id_document_number': 'P9988776611'
             }
         )
-        if created or not admin.check_password('admin123'):
+        if not admin.check_password('admin123'):
             admin.set_password('admin123')
             admin.save()
 
-        # 2. Create Demo User
-        demo_user, created = User.objects.get_or_create(
+        developer, _ = User.objects.get_or_create(
             username='developer',
             defaults={
                 'email': 'dev@platform.ai',
+                'first_name': 'Alex',
+                'last_name': 'Mercer',
                 'is_staff': False,
                 'plan': 'pro',
-                'bio': 'Full-Stack Software Engineer',
-                'preferred_languages': ['python', 'javascript', 'html']
+                'bio': 'Full-Stack Engineer specialized in React, Python, and Microservices',
+                'preferred_languages': ['python', 'javascript', 'html', 'css'],
+                'phone_number': '+1 650 555 0144',
+                'country': 'Canada',
+                'kyc_verified': True,
+                'id_document_type': 'drivers_license',
+                'id_document_number': 'DL-887766554'
             }
         )
-        if created or not demo_user.check_password('dev12345'):
-            demo_user.set_password('dev12345')
-            demo_user.save()
+        if not developer.check_password('dev12345'):
+            developer.set_password('dev12345')
+            developer.save()
 
-        # 3. Create Demo Projects & Files
-        project1, _ = Project.objects.get_or_create(
-            name='AI Analytics Engine',
-            owner=demo_user,
+        reviewer, _ = User.objects.get_or_create(
+            username='reviewer',
             defaults={
-                'description': 'Real-time telemetry and data processing microservice',
+                'email': 'reviewer@platform.ai',
+                'first_name': 'Elena',
+                'last_name': 'Rostova',
+                'is_staff': False,
+                'plan': 'pro',
+                'bio': 'Senior Code Reviewer & Security Specialist',
+                'preferred_languages': ['python', 'sql', 'go'],
+                'phone_number': '+44 20 7946 0912',
+                'country': 'United Kingdom',
+                'kyc_verified': True,
+                'id_document_type': 'national_id',
+                'id_document_number': 'UK-90123456'
+            }
+        )
+        if not reviewer.check_password('reviewer123'):
+            reviewer.set_password('reviewer123')
+            reviewer.save()
+
+        # ==========================================
+        # 2. CODE WORKSPACE SEEDING (Projects, Files, Versions)
+        # ==========================================
+        # Project 1: Python Stream Engine
+        proj1, _ = Project.objects.get_or_create(
+            name='AI Telemetry Stream Processor',
+            owner=developer,
+            defaults={
+                'description': 'Real-time telemetry metric processing microservice built with Python',
                 'language_stack': 'python',
                 'visibility': 'public'
             }
         )
 
-        file1, _ = ProjectFile.objects.get_or_create(
-            project=project1,
+        file1_1, _ = ProjectFile.objects.get_or_create(
+            project=proj1,
             path='analytics.py',
             defaults={
                 'language': 'python',
@@ -69,7 +112,7 @@ def seed():
 import requests
 
 def calculate_metrics(events: list) -> dict:
-    """Calculate aggregated metrics from stream events."""
+    """Calculate aggregated metrics from telemetry stream events."""
     total = 0
     errors = 0
     
@@ -86,31 +129,37 @@ def calculate_metrics(events: list) -> dict:
     }
 
 def main():
-    sample_data = [
+    sample_events = [
         {'type': 'click', 'value': 10},
         {'type': 'error', 'value': 0},
-        {'type': 'buy', 'value': 50}
+        {'type': 'purchase', 'value': 50}
     ]
-    print("Metrics Result:", calculate_metrics(sample_data))
+    metrics = calculate_metrics(sample_events)
+    print("Telemetry Metrics Output:", metrics)
 
 if __name__ == '__main__':
     main()
 '''
             }
         )
+
         FileVersion.objects.get_or_create(
-            file=file1,
-            content=file1.current_content,
-            author=demo_user,
-            commit_message='Initial stream processor code'
+            file=file1_1,
+            commit_message='Initial stream telemetry processor baseline',
+            defaults={'content': file1_1.current_content, 'author': developer}
+        )
+        FileVersion.objects.get_or_create(
+            file=file1_1,
+            commit_message='Added error handling and default zero division guard',
+            defaults={'content': file1_1.current_content, 'author': developer}
         )
 
-        file2, _ = ProjectFile.objects.get_or_create(
-            project=project1,
+        file1_2, _ = ProjectFile.objects.get_or_create(
+            project=proj1,
             path='queries.sql',
             defaults={
                 'language': 'sql',
-                'current_content': '''-- Daily event aggregation query
+                'current_content': '''-- Daily Telemetry Aggregation SQL Query
 SELECT 
     DATE(created_at) AS event_date,
     action_type,
@@ -124,18 +173,19 @@ ORDER BY event_date DESC;
             }
         )
 
-        # Project 2
-        project2, _ = Project.objects.get_or_create(
+        # Project 2: React Dashboard
+        proj2, _ = Project.objects.get_or_create(
             name='React Dashboard Workspace',
-            owner=demo_user,
+            owner=developer,
             defaults={
-                'description': 'Modern web dashboard built with React and Tailwind CSS',
+                'description': 'Modern web application workspace built with React and Tailwind CSS',
                 'language_stack': 'javascript',
                 'visibility': 'private'
             }
         )
-        file3, _ = ProjectFile.objects.get_or_create(
-            project=project2,
+
+        file2_1, _ = ProjectFile.objects.get_or_create(
+            project=proj2,
             path='App.jsx',
             defaults={
                 'language': 'javascript',
@@ -150,9 +200,9 @@ export default function App() {
       <p className="mb-4">Interactive counter component demo.</p>
       <button 
         onClick={() => setCount(count + 1)}
-        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition text-white font-medium"
+        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition font-semibold"
       >
-        Count: {count}
+        Increment Count: {count}
       </button>
     </div>
   );
@@ -161,14 +211,92 @@ export default function App() {
             }
         )
 
-        # 4. Seed Initial Feature Flags & System Settings
+        # ==========================================
+        # 3. AI FEATURES SEEDING (All 15 Actions)
+        # ==========================================
+        ai_action_seeds = [
+            ('explain_code', 95, 'Natural language code breakdown of analytics.py logic.'),
+            ('find_bugs', 85, 'Found 2 mild warnings regarding bare exception swallowing.'),
+            ('fix_bugs', 92, 'Applied automated patch for type guards and zero division.'),
+            ('optimize_code', 90, 'Refactored loop iterations, achieving 18% CPU reduction.'),
+            ('generate_code', 96, 'Generated API request client with timeout handling.'),
+            ('convert_code', 94, 'Converted Python stream processor function into TypeScript.'),
+            ('generate_comments', 98, 'Inserted inline docstrings across all exported functions.'),
+            ('generate_docs', 95, 'Generated comprehensive Markdown API documentation.'),
+            ('generate_tests', 93, 'Synthesized Pytest unit test suite with 4 test cases.'),
+            ('generate_sql', 97, 'Built aggregated SQL query with indexing recommendations.'),
+            ('explain_error', 91, 'Pinpointed KeyError root cause and provided 3-step fix.'),
+            ('detect_security', 88, 'OWASP audit complete. Scanned for hardcoded credentials.'),
+            ('code_quality', 92, 'Calculated overall Maintainability Index: 92/100.'),
+            ('complexity_analysis', 89, 'Cyclomatic Complexity score is 4 (Grade A).'),
+            ('ai_code_review', 94, 'Senior PR Code Review complete. Approved for production.')
+        ]
+
+        for action_key, score, summary in ai_action_seeds:
+            job, _ = AIJob.objects.get_or_create(
+                user=developer,
+                project=proj1,
+                action_type=action_key,
+                defaults={
+                    'status': 'completed',
+                    'input_params': {'code': file1_1.current_content, 'language': 'python'},
+                    'result': {
+                        'summary': summary,
+                        'score': score,
+                        'explanation': f'Detailed AI execution analysis for {action_key}.'
+                    },
+                    'tokens_used': 340,
+                    'completed_at': timezone.now()
+                }
+            )
+
+            AIActionResult.objects.get_or_create(
+                job=job,
+                defaults={
+                    'user': developer,
+                    'project': proj1,
+                    'file': file1_1,
+                    'action_type': action_key,
+                    'score': score,
+                    'summary': summary,
+                    'structured_payload': job.result
+                }
+            )
+
+        # ==========================================
+        # 4. COLLABORATION SEEDING (Members & Line Comments)
+        # ==========================================
+        ProjectMember.objects.get_or_create(
+            project=proj1,
+            user=reviewer,
+            defaults={'role': 'editor'}
+        )
+        ProjectMember.objects.get_or_create(
+            project=proj1,
+            user=admin,
+            defaults={'role': 'admin'}
+        )
+
+        LineComment.objects.get_or_create(
+            file=file1_1,
+            line_number=14,
+            author=reviewer,
+            defaults={
+                'body': 'Consider adding explicit type annotations to events list items.',
+                'resolved': False
+            }
+        )
+
+        # ==========================================
+        # 5. ADMIN MODULE SEEDING (Settings & Feature Flags)
+        # ==========================================
         SystemSetting.objects.get_or_create(
             key='max_tokens_per_request',
-            defaults={'value': 4096, 'description': 'Maximum context window tokens per AI action'}
+            defaults={'value': 4096, 'description': 'Maximum token context window for AI actions'}
         )
         SystemSetting.objects.get_or_create(
             key='active_llm_model',
-            defaults={'value': 'Claude 3.5 Sonnet', 'description': 'Primary LLM inference engine'}
+            defaults={'value': 'Groq LLaMA 3.3 70B (Production)', 'description': 'Primary LLM inference engine'}
         )
 
         feature_keys = [
@@ -183,22 +311,24 @@ export default function App() {
                 defaults={'is_enabled': True, 'allowed_roles': ['free', 'pro', 'enterprise']}
             )
 
-        # 5. Activity Log Seed
+        # ==========================================
+        # 6. ACTIVITY LOG SEEDING
+        # ==========================================
         ActivityLog.objects.get_or_create(
-            user=demo_user,
-            action_type='user_registered',
-            defaults={'target_type': 'user', 'target_id': str(demo_user.id), 'metadata': {'username': 'developer'}}
+            user=developer,
+            action_type='user_registered_kyc_verified',
+            defaults={'target_type': 'user', 'target_id': str(developer.id), 'metadata': {'username': 'developer'}}
         )
         ActivityLog.objects.get_or_create(
-            user=demo_user,
+            user=developer,
             action_type='project_created',
-            defaults={'target_type': 'project', 'target_id': str(project1.id), 'metadata': {'name': project1.name}}
+            defaults={'target_type': 'project', 'target_id': str(proj1.id), 'metadata': {'name': proj1.name}}
         )
 
-        print("Successfully seeded demo users, projects, files, settings, and flags!")
+        print("End-to-end database seeding completed successfully!")
+
     except Exception as e:
-        print(f"Seed process warning (non-fatal): {e}")
+        print(f"Seed process notification: {e}")
 
 if __name__ == '__main__':
     seed()
-

@@ -2,15 +2,27 @@
 
 @layer utilities {
   .glass-panel {
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(11, 15, 25, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
   .glass-card {
-    background: rgba(30, 41, 59, 0.6);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(18, 24, 38, 0.65);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .glow-cyan {
+    box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.35);
+  }
+  .glow-indigo {
+    box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.35);
+  }
+  .bg-grid-pattern {
+    background-size: 32px 32px;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   }
 }
 
@@ -20,7 +32,7 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #070a12;
 }
 ::-webkit-scrollbar-thumb {
   background: #1e293b;
@@ -33,7 +45,7 @@
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #f8fafc;
-  background-color: #030712;
+  background-color: #070a12;
 }
 
 code, pre {

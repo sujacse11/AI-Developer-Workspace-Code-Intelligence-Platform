@@ -32,10 +32,17 @@ export default function Navbar() {
         </Link>
 
         {activeProject && (
-          <div className="hidden md:flex items-center px-3 py-1 rounded-lg bg-slate-800/60 border border-slate-700/50 text-xs text-slate-300 space-x-2">
-            <FolderCode className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-medium text-slate-200">{activeProject.name}</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 font-mono text-cyan-300">{activeProject.language_stack}</span>
+          <div className="hidden md:flex items-center space-x-2">
+            <div className="flex items-center px-3 py-1 rounded-lg bg-slate-800/60 border border-slate-700/50 text-xs text-slate-300 space-x-2">
+              <FolderCode className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="font-medium text-slate-200">{activeProject.name}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700 font-mono text-cyan-300">{activeProject.language_stack}</span>
+            </div>
+
+            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-[10px] font-mono text-cyan-300">
+              <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span>Groq LLaMA-3.3 Active</span>
+            </div>
           </div>
         )}
       </div>
