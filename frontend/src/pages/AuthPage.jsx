@@ -193,14 +193,6 @@ export default function AuthPage() {
           >
             Register & KYC
           </button>
-          <button
-            onClick={() => { setAuthMode('forgot'); setLocalError(''); }}
-            className={`flex-1 py-2 font-semibold rounded-lg transition ${
-              ['forgot', 'reset_confirm'].includes(authMode) ? 'bg-cyan-500 text-slate-950 shadow' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Forgot Password
-          </button>
         </div>
 
         {/* Error / Success Notifications */}
@@ -237,16 +229,7 @@ export default function AuthPage() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-[10px] uppercase font-bold text-slate-400 block">Password</label>
-                <button
-                  type="button"
-                  onClick={() => setAuthMode('forgot')}
-                  className="text-[10px] text-cyan-400 hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
+              <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Password</label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
                 <input
@@ -257,6 +240,18 @@ export default function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
+              </div>
+
+              {/* Forgot Password link directly below password input */}
+              <div className="flex justify-end mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => { setAuthMode('forgot'); setLocalError(''); setResetSuccessMsg(''); }}
+                  className="text-[11px] text-cyan-400 hover:text-cyan-300 hover:underline font-medium flex items-center space-x-1"
+                >
+                  <KeyRound className="w-3 h-3" />
+                  <span>Forgot Password? Reset Here</span>
+                </button>
               </div>
             </div>
 
