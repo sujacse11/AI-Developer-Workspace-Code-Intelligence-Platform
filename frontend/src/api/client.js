@@ -60,6 +60,8 @@ export const api = {
   // Auth
   login: (username, password) => apiClient.post('/users/login/', { username, password }),
   register: (data) => apiClient.post('/users/register/', data),
+  requestPasswordReset: (email) => apiClient.post('/users/password-reset-request/', { email }),
+  confirmPasswordReset: (token, new_password) => apiClient.post('/users/password-reset-confirm/', { token, new_password }),
   getProfile: () => apiClient.get('/users/me/'),
   updateProfile: (data) => apiClient.patch('/users/me/', data),
   getDashboard: () => apiClient.get('/dashboard/'),
