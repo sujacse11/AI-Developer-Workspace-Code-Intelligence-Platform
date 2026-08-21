@@ -69,22 +69,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database Configuration: Render DATABASE_URL / Aiven MySQL / SQLite fallback
+# Database Configuration: MySQL / Render DATABASE_URL / SQLite fallback
 import dj_database_url
 
-DATABASE_URL = os.environ.get('DATABASE_URL')
-DB_ENGINE = os.environ.get('DB_ENGINE', '').lower()
-DB_HOST = os.environ.get('DB_HOST', '')
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip()
+DB_ENGINE = os.environ.get('DB_ENGINE', '').lower().strip()
+DB_HOST = os.environ.get('DB_HOST', '').strip()
 
-if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
-elif DB_ENGINE in ('mysql', 'aiven') and DB_HOST:
+if DB_ENGINE in ('mysql', 'aiven') and DB_HOST:
     import pymysql
     pymysql.install_as_MySQLdb()
     
@@ -106,6 +98,33 @@ elif DB_ENGINE in ('mysql', 'aiven') and DB_HOST:
             'OPTIONS': db_options,
         }
     }
+elif DATABASE_URL and DB_ENGINE != 'sqlite3':
+    # Fix short internal Render hostname (e.g. dpg-xxx-a -> dpg-xxx-a.oregon-postgres.render.com)
+    if 'dpg-' in DATABASE_URL and '.render.com' not in DATABASE_URL:
+        # Try appending default Render PostgreSQL domain suffix
+        parts = DATABASE_URL.split('@')
+        if len(parts) == 2:
+            user_pass, host_db = parts
+            host_parts = host_db.split('/')
+            if len(host_parts) == 2:
+                host, dbname = host_parts
+                if not host.endswith('.render.com'):
+                    DATABASE_URL = f"{user_pass}@{host}.oregon-postgres.render.com/{dbname}"
+
+    try:
+        parsed_db = dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+        DATABASES = {'default': parsed_db}
+    except Exception:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 else:
     DATABASES = {
         'default': {
@@ -113,6 +132,9 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
+
+
 
 
 

@@ -33,9 +33,13 @@ class BaseAIActionService:
         self.job.save()
 
         try:
-            # Check if external LLM API key is present
-            api_key = os.environ.get('ANTHROPIC_API_KEY') or os.environ.get('OPENAI_API_KEY')
-            if api_key:
+            # Check if external LLM API key is present (Groq, Anthropic, or OpenAI)
+            groq_key = os.environ.get('GROQ_API_KEY', '').strip()
+            api_key = groq_key or os.environ.get('ANTHROPIC_API_KEY', '').strip() or os.environ.get('OPENAI_API_KEY', '').strip()
+
+            if groq_key:
+                raw_response, tokens = self._call_groq_llm(groq_key)
+            elif api_key:
                 raw_response, tokens = self._call_external_llm(api_key)
             else:
                 raw_response, tokens = self._fallback_intelligent_engine()
@@ -65,7 +69,7 @@ class BaseAIActionService:
                 file=file_obj,
                 action_type=self.job.action_type,
                 score=score,
-                summary=summary[:500],
+                summary=str(summary)[:500],
                 structured_payload=raw_response
             )
 
@@ -86,9 +90,66 @@ class BaseAIActionService:
             self.job.save()
             raise e
 
+    def _call_groq_llm(self, groq_key: str) -> tuple[dict, int]:
+        """Executes LLM action using Groq's LLaMA 3.3 70B model with prompt injection safety."""
+        prompt_input = self.input_params.get('prompt', '')
+        error_text = self.input_params.get('error_text', '')
+        
+        user_message = f"Action: {self.action_type}\nLanguage: {self.language}\n"
+        if prompt_input:
+            user_message += f"User Prompt: {prompt_input}\n"
+        if error_text:
+            user_message += f"Error Output: {error_text}\n"
+        if self.code:
+            user_message += self.sanitize_code_input(self.code)
+
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": f"{self.system_prompt} Perform action '{self.action_type}'. "
+                               f"Provide clear structured response with summary, explanations, and code suggestions."
+                },
+                {"role": "user", "content": user_message}
+            ],
+            "temperature": 0.2,
+            "max_tokens": 2048
+        }
+
+        headers = {
+            "Authorization": f"Bearer {groq_key}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            resp = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=25)
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data['choices'][0]['message']['content']
+                usage = data.get('usage', {})
+                total_tokens = usage.get('total_tokens', 250)
+
+                # Try parsing JSON if model returned structured output, else format as markdown explanation
+                try:
+                    structured = json.loads(content)
+                    if isinstance(structured, dict):
+                        return structured, total_tokens
+                except Exception:
+                    pass
+
+                return {
+                    "summary": f"Groq LLaMA-3.3 {self.action_type.replace('_', ' ').capitalize()} analysis complete.",
+                    "explanation": content,
+                    "generated_code": content if any(k in self.action_type for k in ['generate', 'fix', 'convert', 'optimize']) else None
+                }, total_tokens
+        except Exception as err:
+            print(f"Groq API Error: {err}, falling back to local engine.")
+
+        return self._fallback_intelligent_engine()
+
     def _call_external_llm(self, api_key: str) -> tuple[dict, int]:
         """Calls Anthropic or OpenAI API if keys are provided."""
-        # Generic payload construction for API provider
         return self._fallback_intelligent_engine()
 
     def _fallback_intelligent_engine(self) -> tuple[dict, int]:
