@@ -36,5 +36,4 @@ services:
         fromService:
           type: web
           name: ai-workspace-backend
-          property: url
-          append: /api/v1
+          property: host
