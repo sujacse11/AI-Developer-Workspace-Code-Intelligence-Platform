@@ -191,7 +191,7 @@ export default function AuthPage() {
               authMode === 'register' ? 'bg-cyan-500 text-slate-950 shadow' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Register & KYC
+            Register
           </button>
         </div>
 
@@ -352,11 +352,11 @@ export default function AuthPage() {
               </div>
             </div>
 
-            {/* KYC Check Section */}
+            {/* Mandatory Identity Verification Section */}
             <div className="p-3 bg-indigo-950/20 rounded-2xl border border-indigo-500/30 space-y-2.5">
               <span className="text-[10px] uppercase font-bold text-indigo-300 tracking-wider flex items-center space-x-1">
                 <ShieldCheck className="w-3 h-3 text-indigo-400" />
-                <span>Mandatory KYC Identity Verification Check</span>
+                <span>Mandatory Identity Verification</span>
               </span>
 
               <div className="grid grid-cols-2 gap-3">
@@ -385,6 +385,9 @@ export default function AuthPage() {
                   />
                 </div>
               </div>
+              <p className="text-[10px] text-slate-400 italic">
+                * ID Document Type is the type of government-issued ID card used to verify your account identity (e.g. Passport, National ID Card, or Driver's License).
+              </p>
             </div>
 
             {/* Password Strength Field */}
