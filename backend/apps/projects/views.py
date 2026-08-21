@@ -71,38 +71,103 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         return Response(ProjectFileSerializer(file_obj).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['post'], url_path='batch-files')
+    def batch_create_files(self, request, pk=None):
+        project = self.get_object()
+        files_data = request.data.get('files', [])
+        if not files_data or not isinstance(files_data, list):
+            return Response({'error': 'A non-empty "files" array is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        created_files = []
+        errors = []
+
+        with transaction.atomic():
+            for item in files_data:
+                path = item.get('path', '').strip()
+                if not path:
+                    continue
+                
+                lang = item.get('language')
+                if not lang:
+                    ext = path.split('.')[-1].lower() if '.' in path else ''
+                    lang = 'python' if ext == 'py' else ('javascript' if ext in ['js', 'jsx'] else ('typescript' if ext in ['ts', 'tsx'] else ('html' if ext == 'html' else ('css' if ext == 'css' else ('sql' if ext == 'sql' else 'plaintext')))))
+                
+                content = item.get('content', f'# {path}\n')
+
+                if ProjectFile.objects.filter(project=project, path=path).exists():
+                    errors.append(f'File "{path}" already exists.')
+                    continue
+
+                pfile = ProjectFile.objects.create(
+                    project=project,
+                    path=path,
+                    language=lang,
+                    current_content=content
+                )
+                FileVersion.objects.create(
+                    file=pfile,
+                    content=content,
+                    author=request.user,
+                    commit_message=f'Created file {path} via batch creation'
+                )
+                created_files.append(pfile)
+
+        return Response({
+            'message': f'Successfully created {len(created_files)} files.',
+            'created_files': ProjectFileSerializer(created_files, many=True).data,
+            'errors': errors
+        }, status=status.HTTP_201_CREATED if created_files else status.HTTP_400_BAD_REQUEST)
+
     @action(detail=True, methods=['post'], url_path='upload')
     def upload_zip(self, request, pk=None):
         project = self.get_object()
-        uploaded_file = request.FILES.get('file')
-        if not uploaded_file:
+        uploaded_files = request.FILES.getlist('files') or request.FILES.getlist('file')
+        if not uploaded_files:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        def infer_language(filename):
+            ext = filename.split('.')[-1].lower() if '.' in filename else ''
+            lang_map = {
+                'py': 'python', 'js': 'javascript', 'jsx': 'javascript',
+                'ts': 'typescript', 'tsx': 'typescript', 'html': 'html',
+                'css': 'css', 'json': 'json', 'md': 'markdown', 'sql': 'sql',
+                'cpp': 'cpp', 'c': 'cpp', 'java': 'java', 'go': 'go',
+                'rs': 'rust', 'php': 'php', 'cs': 'csharp', 'rb': 'ruby',
+                'yaml': 'yaml', 'yml': 'yaml'
+            }
+            return lang_map.get(ext, 'plaintext')
 
         created_files = []
         try:
-            with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
-                for file_info in zip_ref.infolist():
-                    if file_info.is_dir():
-                        continue
-                    
-                    filename = file_info.filename
-                    # Ignore junk hidden files
-                    if filename.startswith('__MACOSX') or filename.endswith('.DS_Store'):
-                        continue
+            for uploaded_file in uploaded_files:
+                filename = uploaded_file.name
+                if filename.endswith('.zip'):
+                    with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+                        for file_info in zip_ref.infolist():
+                            if file_info.is_dir():
+                                continue
+                            zname = file_info.filename
+                            if zname.startswith('__MACOSX') or zname.endswith('.DS_Store'):
+                                continue
 
-                    content = zip_ref.read(filename).decode('utf-8', errors='ignore')
-                    
-                    # infer language
-                    lang = 'plaintext'
-                    if filename.endswith('.py'): lang = 'python'
-                    elif filename.endswith(('.js', '.jsx')): lang = 'javascript'
-                    elif filename.endswith(('.ts', '.tsx')): lang = 'typescript'
-                    elif filename.endswith('.html'): lang = 'html'
-                    elif filename.endswith('.css'): lang = 'css'
-                    elif filename.endswith('.json'): lang = 'json'
-                    elif filename.endswith('.md'): lang = 'markdown'
-                    elif filename.endswith('.sql'): lang = 'sql'
-
+                            content = zip_ref.read(zname).decode('utf-8', errors='ignore')
+                            lang = infer_language(zname)
+                            pfile, _ = ProjectFile.objects.update_or_create(
+                                project=project,
+                                path=zname,
+                                defaults={'language': lang, 'current_content': content}
+                            )
+                            FileVersion.objects.create(
+                                file=pfile,
+                                content=content,
+                                author=request.user,
+                                commit_message=f'Uploaded via zip import: {zname}'
+                            )
+                            created_files.append(pfile)
+                else:
+                    # Direct raw source code file upload
+                    content = uploaded_file.read().decode('utf-8', errors='ignore')
+                    lang = infer_language(filename)
                     pfile, _ = ProjectFile.objects.update_or_create(
                         project=project,
                         path=filename,
@@ -112,28 +177,52 @@ class ProjectViewSet(viewsets.ModelViewSet):
                         file=pfile,
                         content=content,
                         author=request.user,
-                        commit_message=f'Uploaded via zip import: {filename}'
+                        commit_message=f'Uploaded raw source file: {filename}'
                     )
                     created_files.append(pfile)
 
             return Response({
-                'message': f'Successfully imported {len(created_files)} files into project.',
+                'message': f'Successfully imported {len(created_files)} file(s) into project.',
                 'project': ProjectSerializer(project).data
             })
         except Exception as e:
-            return Response({'error': f'Failed to parse zip archive: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': f'Failed to process uploaded file(s): {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=True, methods=['get'], url_path='download')
+    @action(detail=True, methods=['get'], url_path='download', permission_classes=[permissions.AllowAny])
     def download_zip(self, request, pk=None):
-        project = self.get_object()
+        # Support token in query param or standard request user authentication
+        token = request.query_params.get('token')
+        user = request.user
+
+        if token and (not user or not user.is_authenticated):
+            try:
+                from rest_framework_simplejwt.tokens import AccessToken
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                validated_token = AccessToken(token)
+                user_id = validated_token['user_id']
+                user = User.objects.get(id=user_id)
+            except Exception:
+                return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not user or not user.is_authenticated:
+            return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            project = Project.objects.get(pk=pk)
+        except Project.DoesNotExist:
+            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for pfile in project.files.all():
-                zip_file.writestr(pfile.path, pfile.current_content)
+                zip_file.writestr(pfile.path, pfile.current_content or '')
 
         buffer.seek(0)
+        zip_filename = f"{project.name.replace(' ', '_')}.zip"
         response = HttpResponse(buffer.getvalue(), content_type='application/zip')
-        response['Content-Disposition'] = f'attachment; filename="{project.name.replace(" ", "_")}.zip"'
+        response['Content-Disposition'] = f'attachment; filename="{zip_filename}"'
+        response['Access-Control-Expose-Headers'] = 'Content-Disposition'
         return response
 
 class ProjectFileViewSet(viewsets.ModelViewSet):
@@ -144,7 +233,7 @@ class ProjectFileViewSet(viewsets.ModelViewSet):
         return ProjectFile.objects.filter(project__owner=self.request.user)
 
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop('partial', True)
         instance = self.get_object()
 
         new_content = request.data.get('current_content', instance.current_content)

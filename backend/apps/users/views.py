@@ -130,13 +130,21 @@ class DashboardView(APIView):
         from apps.projects.serializers import ProjectSerializer
         from apps.ai.models import AIActionResult
         from apps.ai.serializers import AIActionResultSerializer
+        from django.db.models import Q
 
-        saved_projects = Project.objects.filter(owner=user).order_by('-updated_at')[:10]
-        recent_activities = ActivityLog.objects.filter(user=user).order_by('-created_at')[:10]
-        recent_ai_reviews = AIActionResult.objects.filter(user=user).order_by('-created_at')[:10]
+        if user.is_staff or user.is_superuser:
+            saved_projects = Project.objects.all().order_by('-updated_at')[:15]
+            total_projects = Project.objects.count()
+            recent_activities = ActivityLog.objects.all().order_by('-created_at')[:10]
+            recent_ai_reviews = AIActionResult.objects.all().order_by('-created_at')[:10]
+            total_ai_runs = AIActionResult.objects.count()
+        else:
+            saved_projects = Project.objects.filter(Q(owner=user) | Q(members__user=user)).distinct().order_by('-updated_at')[:10]
+            total_projects = saved_projects.count()
+            recent_activities = ActivityLog.objects.filter(user=user).order_by('-created_at')[:10]
+            recent_ai_reviews = AIActionResult.objects.filter(user=user).order_by('-created_at')[:10]
+            total_ai_runs = AIActionResult.objects.filter(user=user).count()
 
-        total_projects = Project.objects.filter(owner=user).count()
-        total_ai_runs = AIActionResult.objects.filter(user=user).count()
         avg_score = 0
         scores = [r.score for r in recent_ai_reviews if r.score is not None]
         if scores:
@@ -147,7 +155,8 @@ class DashboardView(APIView):
             'stats': {
                 'total_projects': total_projects,
                 'total_ai_runs': total_ai_runs,
-                'avg_code_quality_score': avg_score
+                'avg_code_quality_score': avg_score,
+                'is_admin_view': bool(user.is_staff or user.is_superuser)
             },
             'recent_projects': ProjectSerializer(saved_projects, many=True).data,
             'recent_activities': ActivityLogSerializer(recent_activities, many=True).data,

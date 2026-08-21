@@ -18,4 +18,4 @@ class LineCommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = LineComment
         fields = ('id', 'file', 'line_number', 'author', 'author_username', 'author_avatar', 'body', 'parent_comment', 'resolved', 'replies_count', 'created_at')
-        read_only_fields = ('id', 'author', 'created_at')
+        read_only_fields = ('id', 'author', 'file', 'created_at')
