@@ -74,6 +74,7 @@ import dj_database_url
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 DB_ENGINE = os.environ.get('DB_ENGINE', '').lower()
+DB_HOST = os.environ.get('DB_HOST', '')
 
 if DATABASE_URL:
     DATABASES = {
@@ -83,7 +84,7 @@ if DATABASE_URL:
             conn_health_checks=True,
         )
     }
-elif DB_ENGINE in ('mysql', 'aiven'):
+elif DB_ENGINE in ('mysql', 'aiven') and DB_HOST:
     import pymysql
     pymysql.install_as_MySQLdb()
     
@@ -100,8 +101,8 @@ elif DB_ENGINE in ('mysql', 'aiven'):
             'NAME': os.environ.get('DB_NAME', 'defaultdb'),
             'USER': os.environ.get('DB_USER', 'avnadmin'),
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '11831'),
+            'HOST': DB_HOST,
+            'PORT': os.environ.get('DB_PORT', '3306'),
             'OPTIONS': db_options,
         }
     }
@@ -112,6 +113,7 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
 
 
 
