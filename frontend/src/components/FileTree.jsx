@@ -1,13 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { api } from '../api/client';
-import { FileCode, Plus, Folder, Upload, Download, Trash2, ChevronRight, ChevronDown, RefreshCw } from 'lucide-react';
+import { FileCode, Plus, Folder, Upload, Download, Trash2, RefreshCw, FolderPlus, Layers } from 'lucide-react';
 
 export default function FileTree() {
-  const { activeProject, openFiles, activeFile, openFileInTab, closeFileTab, setActiveProject } = useStore();
+  const { projects, activeProject, openFiles, activeFile, openFileInTab, closeFileTab, setActiveProject, fetchProjects } = useStore();
   const [newFileName, setNewFileName] = useState('');
+  const [isBatchMode, setIsBatchMode] = useState(false);
   const [showNewFileForm, setShowNewFileForm] = useState(false);
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [newProjName, setNewProjName] = useState('');
+  const [newProjStack, setNewProjStack] = useState('python');
   const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
 
   if (!activeProject) {
     return (
@@ -22,28 +30,70 @@ export default function FileTree() {
     if (!newFileName.trim()) return;
 
     try {
-      const ext = newFileName.split('.').pop() || 'py';
-      let lang = 'python';
-      if (['js', 'jsx'].includes(ext)) lang = 'javascript';
-      if (['ts', 'tsx'].includes(ext)) lang = 'typescript';
-      if (ext === 'sql') lang = 'sql';
-      if (ext === 'html') lang = 'html';
-      if (ext === 'css') lang = 'css';
+      const rawInput = newFileName.trim();
+      // Check if user entered multiple files separated by comma or newlines
+      const filePaths = rawInput.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
 
-      const res = await api.createFile(activeProject.id, {
-        path: newFileName.trim(),
-        language: lang,
-        content: `# File created: ${newFileName}\n`
-      });
+      if (filePaths.length > 1 || isBatchMode) {
+        const payloadFiles = filePaths.map(p => {
+          const ext = p.split('.').pop() || 'py';
+          let lang = 'python';
+          if (['js', 'jsx'].includes(ext)) lang = 'javascript';
+          if (['ts', 'tsx'].includes(ext)) lang = 'typescript';
+          if (ext === 'sql') lang = 'sql';
+          if (ext === 'html') lang = 'html';
+          if (ext === 'css') lang = 'css';
+          return { path: p, language: lang, content: `# File created: ${p}\n` };
+        });
 
-      setNewFileName('');
-      setShowNewFileForm(false);
-      
-      // Refresh project
-      await setActiveProject(activeProject);
-      openFileInTab(res.data);
+        const res = await api.batchCreateFiles(activeProject.id, payloadFiles);
+        setNewFileName('');
+        setShowNewFileForm(false);
+        await setActiveProject(activeProject);
+        if (res.data.created_files && res.data.created_files.length > 0) {
+          openFileInTab(res.data.created_files[0]);
+        }
+      } else {
+        const singlePath = filePaths[0] || rawInput;
+        const ext = singlePath.split('.').pop() || 'py';
+        let lang = 'python';
+        if (['js', 'jsx'].includes(ext)) lang = 'javascript';
+        if (['ts', 'tsx'].includes(ext)) lang = 'typescript';
+        if (ext === 'sql') lang = 'sql';
+        if (ext === 'html') lang = 'html';
+        if (ext === 'css') lang = 'css';
+
+        const res = await api.createFile(activeProject.id, {
+          path: singlePath,
+          language: lang,
+          content: `# File created: ${singlePath}\n`
+        });
+
+        setNewFileName('');
+        setShowNewFileForm(false);
+        await setActiveProject(activeProject);
+        openFileInTab(res.data);
+      }
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to create file');
+      alert(err.response?.data?.error || 'Failed to create file(s)');
+    }
+  };
+
+  const handleCreateProjectInline = async (e) => {
+    e.preventDefault();
+    if (!newProjName.trim()) return;
+    try {
+      const res = await api.createProject({
+        name: newProjName.trim(),
+        language_stack: newProjStack,
+        visibility: 'private'
+      });
+      setShowNewProjectModal(false);
+      setNewProjName('');
+      await fetchProjects();
+      await setActiveProject(res.data);
+    } catch (err) {
+      alert('Failed to create project');
     }
   };
 
@@ -59,12 +109,14 @@ export default function FileTree() {
     }
   };
 
-  const handleZipUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleFileUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]);
+    }
 
     setIsUploading(true);
     try {
@@ -77,13 +129,48 @@ export default function FileTree() {
     }
   };
 
-  const handleExportZip = () => {
-    const url = api.downloadZipUrl(activeProject.id);
-    window.open(url, '_blank');
+  const handleExportZip = async () => {
+    try {
+      const response = await api.downloadZipBlob(activeProject.id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${activeProject.name.replace(/\s+/g, '_')}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      const fallbackUrl = api.downloadZipUrl(activeProject.id);
+      window.open(fallbackUrl, '_blank');
+    }
   };
 
   return (
     <div className="w-64 bg-slate-900/90 border-r border-slate-800/80 flex flex-col h-full select-none">
+      {/* Project Switcher Bar */}
+      <div className="p-2.5 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+        <select
+          value={activeProject.id}
+          onChange={async (e) => {
+            const chosen = projects.find(p => p.id === parseInt(e.target.value));
+            if (chosen) await setActiveProject(chosen);
+          }}
+          className="bg-slate-900 border border-slate-700/80 text-cyan-300 font-bold text-xs rounded px-2 py-1 flex-1 mr-1 truncate focus:outline-none"
+        >
+          {projects.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+        <button
+          onClick={() => setShowNewProjectModal(true)}
+          title="New Project"
+          className="p-1 text-slate-400 hover:text-cyan-300 rounded hover:bg-slate-800"
+        >
+          <FolderPlus className="w-4 h-4" />
+        </button>
+      </div>
+
       {/* File Tree Header */}
       <div className="p-3 border-b border-slate-800/80 flex items-center justify-between">
         <div className="flex items-center space-x-2 text-slate-200">
@@ -92,16 +179,36 @@ export default function FileTree() {
         </div>
         <div className="flex items-center space-x-1">
           <button
-            onClick={() => setShowNewFileForm(!showNewFileForm)}
-            title="Create File"
+            onClick={() => {
+              setIsBatchMode(false);
+              setShowNewFileForm(!showNewFileForm);
+            }}
+            title="Create Single File"
             className="p-1 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded transition"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
+
+          <button
+            onClick={() => {
+              setIsBatchMode(true);
+              setShowNewFileForm(true);
+            }}
+            title="Batch Create Multiple Files"
+            className="p-1 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded transition"
+          >
+            <Layers className="w-3.5 h-3.5" />
+          </button>
           
-          <label title="Import Zip/File" className="p-1 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded cursor-pointer transition">
+          <label title="Import Source / Zip Files" className="p-1 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded cursor-pointer transition">
             <Upload className="w-3.5 h-3.5" />
-            <input type="file" accept=".zip,.py,.js,.ts,.sql,.html,.css,.json" onChange={handleZipUpload} className="hidden" />
+            <input
+              type="file"
+              multiple
+              accept=".zip,.py,.js,.jsx,.ts,.tsx,.sql,.html,.css,.json,.md,.cpp,.c,.java,.go,.rs,.php,.cs,.yaml,.yml"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
           </label>
 
           <button
@@ -114,18 +221,32 @@ export default function FileTree() {
         </div>
       </div>
 
-      {/* New File Inline Form */}
+      {/* New File / Batch Files Inline Form */}
       {showNewFileForm && (
-        <form onSubmit={handleCreateFile} className="p-2 border-b border-slate-800 bg-slate-950/60">
-          <input
-            type="text"
-            placeholder="e.g. utils/helper.py"
-            value={newFileName}
-            onChange={(e) => setNewFileName(e.target.value)}
-            autoFocus
-            className="w-full bg-slate-900 border border-cyan-500/40 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500"
-          />
-          <div className="flex justify-end space-x-1.5 mt-1.5">
+        <form onSubmit={handleCreateFile} className="p-2 border-b border-slate-800 bg-slate-950/60 space-y-1.5">
+          <div className="text-[10px] text-cyan-400 font-bold uppercase">
+            {isBatchMode ? 'Batch Create Multiple Files' : 'Create File'}
+          </div>
+          {isBatchMode ? (
+            <textarea
+              rows={3}
+              placeholder="e.g. app.py, utils.py, tests/test_app.py"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              autoFocus
+              className="w-full bg-slate-900 border border-cyan-500/40 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
+            />
+          ) : (
+            <input
+              type="text"
+              placeholder="e.g. utils/helper.py"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              autoFocus
+              className="w-full bg-slate-900 border border-cyan-500/40 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
+            />
+          )}
+          <div className="flex justify-end space-x-1.5">
             <button
               type="button"
               onClick={() => setShowNewFileForm(false)}
@@ -137,7 +258,7 @@ export default function FileTree() {
               type="submit"
               className="px-2.5 py-0.5 text-[10px] bg-cyan-500 text-slate-950 rounded font-semibold hover:bg-cyan-400"
             >
-              Create
+              {isBatchMode ? 'Create All' : 'Create'}
             </button>
           </div>
         </form>
@@ -147,7 +268,7 @@ export default function FileTree() {
       {isUploading && (
         <div className="p-3 bg-indigo-950/40 border-b border-indigo-500/30 flex items-center space-x-2 text-xs text-indigo-300">
           <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-          <span>Parsing uploaded archive...</span>
+          <span>Processing uploaded file(s)...</span>
         </div>
       )}
 
@@ -155,7 +276,7 @@ export default function FileTree() {
       <div className="flex-1 overflow-y-auto py-2 px-1">
         {activeProject.files?.length === 0 ? (
           <div className="p-4 text-center text-xs text-slate-500">
-            No files in project yet. Click + to create one.
+            No files in project yet. Click + or Batch icon to create files.
           </div>
         ) : (
           activeProject.files?.map((file) => {
@@ -187,6 +308,51 @@ export default function FileTree() {
           })
         )}
       </div>
+
+      {/* Inline Quick New Project Modal */}
+      {showNewProjectModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+            <h4 className="text-xs font-bold text-slate-100 uppercase">Create New Project</h4>
+            <form onSubmit={handleCreateProjectInline} className="space-y-2">
+              <input
+                type="text"
+                placeholder="Project Name"
+                required
+                value={newProjName}
+                onChange={(e) => setNewProjName(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200"
+              />
+              <select
+                value={newProjStack}
+                onChange={(e) => setNewProjStack(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200"
+              >
+                <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
+                <option value="typescript">TypeScript</option>
+                <option value="sql">SQL</option>
+                <option value="html">HTML/CSS</option>
+              </select>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNewProjectModal(false)}
+                  className="px-3 py-1 text-xs text-slate-400 hover:text-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-3 py-1 text-xs bg-cyan-500 text-slate-950 font-bold rounded hover:bg-cyan-400"
+                >
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -73,6 +73,7 @@ export const api = {
   createProject: (data) => apiClient.post('/projects/', data),
   deleteProject: (id) => apiClient.delete(`/projects/${id}/`),
   createFile: (projectId, data) => apiClient.post(`/projects/${projectId}/files/`, data),
+  batchCreateFiles: (projectId, files) => apiClient.post(`/projects/${projectId}/batch-files/`, { files }),
   saveFile: (fileId, data) => apiClient.put(`/files/${fileId}/`, data),
   deleteFile: (fileId) => apiClient.delete(`/files/${fileId}/`),
   getFileVersions: (fileId) => apiClient.get(`/files/${fileId}/versions/`),
@@ -80,7 +81,11 @@ export const api = {
   uploadZip: (projectId, formData) => apiClient.post(`/projects/${projectId}/upload/`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
-  downloadZipUrl: (projectId) => `${API_BASE_URL}/projects/${projectId}/download/`,
+  downloadZipUrl: (projectId) => {
+    const token = localStorage.getItem('access_token');
+    return `${API_BASE_URL}/projects/${projectId}/download/${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+  },
+  downloadZipBlob: (projectId) => apiClient.get(`/projects/${projectId}/download/`, { responseType: 'blob' }),
 
   // AI Actions & Jobs
   executeAI: (data) => apiClient.post('/ai/execute/', data),

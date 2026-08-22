@@ -22,9 +22,9 @@ class User(AbstractUser):
     
     # Compulsory Contact & KYC Verification Fields
     phone_number = models.CharField(max_length=30, blank=True, default='')
-    country = models.CharField(max_length=100, blank=True, default='')
+    country = models.CharField(max_length=100, blank=True, default='India')
     kyc_verified = models.BooleanField(default=False)
-    id_document_type = models.CharField(max_length=30, choices=DOC_TYPES, default='national_id')
+    id_document_type = models.CharField(max_length=30, choices=DOC_TYPES, default='aadhaar')
     id_document_number = models.CharField(max_length=100, blank=True, default='')
 
     # Forgot Password reset token fields

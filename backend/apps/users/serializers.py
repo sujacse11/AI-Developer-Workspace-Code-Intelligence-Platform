@@ -89,6 +89,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('id', 'username', 'email', 'kyc_verified', 'plan', 'is_staff', 'created_at')
 
+    def validate_phone_number(self, value):
+        if value:
+            clean_num = re.sub(r'[\s\-\+\(\)]', '', value)
+            if not clean_num.isdigit() or len(clean_num) < 8 or len(clean_num) > 15:
+                raise serializers.ValidationError("Phone number must contain between 8 and 15 valid digits.")
+        return value
+
+    def validate_id_document_number(self, value):
+        if value is not None and not value.strip():
+            raise serializers.ValidationError("ID Document number cannot be empty.")
+        return value.strip() if value else value
+
 class ActivityLogSerializer(serializers.ModelSerializer):
     user_username = serializers.ReadOnlyField(source='user.username')
 

@@ -85,20 +85,52 @@ export default function DashboardPage() {
         {/* Welcome Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 p-6 rounded-3xl border border-slate-800 shadow-xl">
           <div>
-            <h1 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
-              <span>Developer Workspace Dashboard</span>
-              <Sparkles className="w-5 h-5 text-cyan-400" />
-            </h1>
-            <p className="text-xs text-slate-400 mt-1">Manage software projects, track AI reviews, and launch code intelligence.</p>
+            <div className="flex items-center space-x-2 mb-1">
+              <h1 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2">
+                <span>{stats?.is_admin_view ? 'System Admin & Platform Dashboard' : 'Developer Workspace Dashboard'}</span>
+                <Sparkles className="w-5 h-5 text-cyan-400" />
+              </h1>
+              {stats?.is_admin_view && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-mono text-amber-400 font-bold">
+                  Admin Oversight Mode
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-400">
+              {stats?.is_admin_view 
+                ? 'Full system oversight across all platform projects, user activities, and LLM telemetry statistics.' 
+                : 'Manage software projects, track AI reviews, and launch code intelligence.'}
+            </p>
           </div>
 
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:from-cyan-400 text-slate-950 font-bold text-xs flex items-center space-x-2 shadow-lg shadow-cyan-500/20 transition self-start md:self-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create New Project</span>
-          </button>
+          <div className="flex items-center space-x-3 self-start md:self-auto">
+            {stats?.is_admin_view ? (
+              <>
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 font-bold text-xs flex items-center space-x-2 transition"
+                >
+                  <Gauge className="w-4 h-4" />
+                  <span>Admin Settings & Usage Stats</span>
+                </button>
+                <button
+                  onClick={() => navigate('/workspace')}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:from-cyan-400 text-slate-950 font-bold text-xs flex items-center space-x-2 shadow-lg shadow-cyan-500/20 transition"
+                >
+                  <Code2 className="w-4 h-4" />
+                  <span>Open Global Workspace</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:from-cyan-400 text-slate-950 font-bold text-xs flex items-center space-x-2 shadow-lg shadow-cyan-500/20 transition"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create New Project</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* 3 Top Summary Metrics */}
@@ -287,6 +319,7 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

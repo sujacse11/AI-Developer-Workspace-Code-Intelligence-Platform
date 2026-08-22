@@ -25,69 +25,78 @@ def seed():
         # ==========================================
         # 1. USER MODULE SEEDING (Admin, Dev, Reviewer)
         # ==========================================
-        admin, _ = User.objects.get_or_create(
-            username='admin',
-            defaults={
-                'email': 'admin@platform.ai',
-                'first_name': 'Sarah',
-                'last_name': 'Connor',
-                'is_staff': True,
-                'is_superuser': True,
-                'plan': 'enterprise',
-                'bio': 'Principal AI Platform Administrator & Lead Architect',
-                'preferred_languages': ['python', 'typescript', 'sql', 'rust'],
-                'phone_number': '+1 415 555 0199',
-                'country': 'United States',
-                'kyc_verified': True,
-                'id_document_type': 'passport',
-                'id_document_number': 'P9988776611'
-            }
-        )
+        admin, _ = User.objects.get_or_create(username='admin')
+        admin.email = 'admin@platform.ai'
+        admin.first_name = 'Sarah'
+        admin.last_name = 'Connor'
+        admin.is_staff = True
+        admin.is_superuser = True
+        admin.plan = 'enterprise'
+        admin.bio = 'Principal AI Platform Administrator & Lead Architect'
+        admin.preferred_languages = ['python', 'typescript', 'sql', 'rust']
+        admin.phone_number = '+91 98765 43210'
+        admin.country = 'India'
+        admin.kyc_verified = True
+        admin.id_document_type = 'aadhaar'
+        admin.id_document_number = '1234 5678 9012'
         if not admin.check_password('admin123'):
             admin.set_password('admin123')
-            admin.save()
+        admin.save()
 
-        developer, _ = User.objects.get_or_create(
-            username='developer',
-            defaults={
-                'email': 'dev@platform.ai',
-                'first_name': 'Alex',
-                'last_name': 'Mercer',
-                'is_staff': False,
-                'plan': 'pro',
-                'bio': 'Full-Stack Engineer specialized in React, Python, and Microservices',
-                'preferred_languages': ['python', 'javascript', 'html', 'css'],
-                'phone_number': '+1 650 555 0144',
-                'country': 'Canada',
-                'kyc_verified': True,
-                'id_document_type': 'drivers_license',
-                'id_document_number': 'DL-887766554'
-            }
-        )
+        developer, _ = User.objects.get_or_create(username='developer')
+        developer.email = 'dev@platform.ai'
+        developer.first_name = 'Alex'
+        developer.last_name = 'Mercer'
+        developer.is_staff = False
+        developer.plan = 'free'
+        developer.bio = 'Full-Stack Engineer specialized in React, Python, and Microservices'
+        developer.preferred_languages = ['python', 'javascript', 'html', 'css']
+        developer.phone_number = '+91 91234 56789'
+        developer.country = 'India'
+        developer.kyc_verified = True
+        developer.id_document_type = 'aadhaar'
+        developer.id_document_number = '9876 5432 1098'
         if not developer.check_password('dev12345'):
             developer.set_password('dev12345')
-            developer.save()
+        developer.save()
 
-        reviewer, _ = User.objects.get_or_create(
-            username='reviewer',
-            defaults={
-                'email': 'reviewer@platform.ai',
-                'first_name': 'Elena',
-                'last_name': 'Rostova',
-                'is_staff': False,
-                'plan': 'pro',
-                'bio': 'Senior Code Reviewer & Security Specialist',
-                'preferred_languages': ['python', 'sql', 'go'],
-                'phone_number': '+44 20 7946 0912',
-                'country': 'United Kingdom',
-                'kyc_verified': True,
-                'id_document_type': 'national_id',
-                'id_document_number': 'UK-90123456'
-            }
-        )
+        reviewer, _ = User.objects.get_or_create(username='reviewer')
+        reviewer.email = 'reviewer@platform.ai'
+        reviewer.first_name = 'Elena'
+        reviewer.last_name = 'Rostova'
+        reviewer.is_staff = False
+        reviewer.plan = 'free'
+        reviewer.bio = 'Senior Code Reviewer & Security Specialist'
+        reviewer.preferred_languages = ['python', 'sql', 'go']
+        reviewer.phone_number = '+91 95550 12345'
+        reviewer.country = 'India'
+        reviewer.kyc_verified = True
+        reviewer.id_document_type = 'aadhaar'
+        reviewer.id_document_number = '4321 8765 2109'
         if not reviewer.check_password('reviewer123'):
             reviewer.set_password('reviewer123')
-            reviewer.save()
+        reviewer.save()
+
+        # Update any other user missing or non-compliant profile fields
+        for user in User.objects.all():
+            changed = False
+            if not user.is_staff and user.plan != 'free':
+                user.plan = 'free'
+                changed = True
+            if user.country != 'India':
+                user.country = 'India'
+                changed = True
+            if not user.phone_number or not user.phone_number.startswith('+91'):
+                user.phone_number = '+91 98765 00000'
+                changed = True
+            if user.id_document_type != 'aadhaar':
+                user.id_document_type = 'aadhaar'
+                changed = True
+            if not user.id_document_number:
+                user.id_document_number = '1122 3344 5566'
+                changed = True
+            if changed:
+                user.save()
 
         # ==========================================
         # 2. CODE WORKSPACE SEEDING (Projects, Files, Versions)

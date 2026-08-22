@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import { useStore } from '../store/useStore';
-import { History, RotateCcw, X, Clock, User, CheckCircle2 } from 'lucide-react';
+import { History, RotateCcw, X, Clock, User, CheckCircle2, Split } from 'lucide-react';
 
 export default function VersionHistoryModal({ file, onClose }) {
   const [versions, setVersions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVersion, setSelectedVersion] = useState(null);
+  const [showDiffMode, setShowDiffMode] = useState(false);
   const { openFileInTab, activeProject, setActiveProject } = useStore();
 
   useEffect(() => {
@@ -39,15 +40,35 @@ export default function VersionHistoryModal({ file, onClose }) {
     }
   };
 
+  const computeLineDiff = (versionContent, currentContent) => {
+    const vLines = (versionContent || '').split('\n');
+    const cLines = (currentContent || '').split('\n');
+    const diff = [];
+    const maxLen = Math.max(vLines.length, cLines.length);
+
+    for (let i = 0; i < maxLen; i++) {
+      const v = vLines[i];
+      const c = cLines[i];
+
+      if (v === c) {
+        diff.push({ type: 'same', text: `  ${v || ''}` });
+      } else {
+        if (v !== undefined) diff.push({ type: 'removed', text: `- ${v}` });
+        if (c !== undefined) diff.push({ type: 'added', text: `+ ${c}` });
+      }
+    }
+    return diff;
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div className="w-full max-w-4xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
           <div className="flex items-center space-x-2.5">
             <History className="w-5 h-5 text-indigo-400" />
             <div>
-              <h3 className="text-sm font-bold text-slate-200">Immutable Version History</h3>
+              <h3 className="text-sm font-bold text-slate-200">Immutable Code Version History</h3>
               <p className="text-xs text-slate-400 font-mono">{file.path}</p>
             </div>
           </div>
@@ -100,19 +121,49 @@ export default function VersionHistoryModal({ file, onClose }) {
                     <div className="text-[11px] text-slate-400">Author: {selectedVersion.author_username || 'System'}</div>
                   </div>
 
-                  <button
-                    onClick={() => handleRevert(selectedVersion.id)}
-                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition shadow shadow-indigo-600/20"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Revert to this Version</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setShowDiffMode(!showDiffMode)}
+                      className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition ${
+                        showDiffMode ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'bg-slate-800 text-slate-300 border-slate-700'
+                      }`}
+                    >
+                      <Split className="w-3.5 h-3.5" />
+                      <span>{showDiffMode ? 'Raw Snapshot View' : 'Compare Diff View'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleRevert(selectedVersion.id)}
+                      className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition shadow shadow-indigo-600/20"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Revert to this Version</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto rounded-xl bg-slate-900 border border-slate-800 p-3">
-                  <pre className="font-mono text-xs text-cyan-300 whitespace-pre-wrap">
-                    {selectedVersion.content}
-                  </pre>
+                <div className="flex-1 overflow-y-auto rounded-xl bg-slate-900 border border-slate-800 p-3 font-mono text-xs">
+                  {showDiffMode ? (
+                    <div className="space-y-0.5">
+                      <div className="text-[10px] text-slate-500 mb-2 font-bold uppercase">Diff: Snapshot vs Current Editor Content</div>
+                      {computeLineDiff(selectedVersion.content, file.current_content).map((d, idx) => (
+                        <div
+                          key={idx}
+                          className={
+                            d.type === 'added' ? 'bg-emerald-950/40 text-emerald-300 px-2 py-0.5 rounded' :
+                            d.type === 'removed' ? 'bg-rose-950/40 text-rose-300 px-2 py-0.5 rounded' :
+                            'text-slate-400 px-2 py-0.5'
+                          }
+                        >
+                          {d.text}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <pre className="text-cyan-300 whitespace-pre-wrap">
+                      {selectedVersion.content}
+                    </pre>
+                  )}
                 </div>
               </div>
             ) : (

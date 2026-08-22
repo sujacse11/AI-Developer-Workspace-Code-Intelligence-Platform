@@ -367,8 +367,7 @@ export default function AuthPage() {
                     onChange={(e) => setIdDocType(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200"
                   >
-                    <option value="aadhaar">Aadhaar Card (National ID)</option>
-                    <option value="national_id">National ID Card</option>
+                    <option value="aadhaar">Aadhaar Card</option>
                     <option value="passport">Passport</option>
                     <option value="drivers_license">Driver's License</option>
                   </select>
@@ -379,7 +378,13 @@ export default function AuthPage() {
                   <input
                     type="text"
                     required
-                    placeholder="1234 5678 9012 (Aadhaar)"
+                    placeholder={
+                      idDocType === 'passport' 
+                        ? 'e.g. Z1234567 (Passport)' 
+                        : idDocType === 'drivers_license' 
+                        ? 'e.g. DL-1420110012345' 
+                        : 'e.g. 1234 5678 9012 (Aadhaar)'
+                    }
                     value={idDocNumber}
                     onChange={(e) => setIdDocNumber(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono"
@@ -428,7 +433,7 @@ export default function AuthPage() {
               disabled={authLoading}
               className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:from-cyan-400 text-slate-950 font-extrabold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-cyan-500/25 transition disabled:opacity-50 mt-4"
             >
-              <span>{authLoading ? 'Verifying & Registering...' : 'Complete KYC & Register'}</span>
+              <span>{authLoading ? 'Registering Account...' : 'Register'}</span>
               <ShieldCheck className="w-4 h-4" />
             </button>
           </form>
